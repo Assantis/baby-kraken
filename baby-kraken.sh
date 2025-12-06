@@ -17,6 +17,8 @@ if ! git diff-index --quiet HEAD --; then
   exit 1
 fi
 
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+echo -e "${BLUE}Current branch: ${CYAN}${current_branch}${NC}"
 
 is_hotfix=false
 
