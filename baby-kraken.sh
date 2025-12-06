@@ -31,3 +31,14 @@ else
   echo "${RED}You must be on 'develop' or 'hotfix/*' to create a release.${NC}"
   exit 1
 fi
+
+echo -e "${BLUE}Fetching tags...${NC}"
+git fetch --tags
+
+latest_tag=$(git tag --sort=-v:refname | head -n 1 || true)
+
+if [[ -z "$latest_tag" ]]; then
+  latest_tag="0.0.0"
+fi
+
+echo -e "${BLUE}Latest tag: ${CYAN}${latest_tag}${NC}"
