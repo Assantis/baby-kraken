@@ -60,6 +60,7 @@ echo -e "${BLUE}Fetching tags...${NC}"
 git fetch --tags
 
 # Strip leading v from latest tag if present
+latest_tag=$(git tag --sort=-v:refname | head -n 1 || true)
 clean_tag="${latest_tag#v}"
 
 IFS='.' read -r major minor patch <<< "$clean_tag"
