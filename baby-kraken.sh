@@ -25,7 +25,7 @@ is_hotfix=false
 if [[ "$current_branch" == "develop" ]]; then
   echo "${GREEN}Develop branch detected => normal release${NC}"
 elif [[ "$current_branch" =~ ^hotfix/ ]]; then
-  echo "${YELLOW}Hotfix branch detected$ => hotfix release${NC}"
+  echo "${YELLOW}Hotfix branch detected => hotfix release${NC}"
   is_hotfix=true
 else
   echo "${RED}You must be on 'develop' or 'hotfix/*' to create a release.${NC}"
