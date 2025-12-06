@@ -9,7 +9,7 @@ BLUE=$'\033[0;34m'; CYAN=$'\033[0;36m'; NC=$'\033[0m'
 DRY_RUN=false
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_RUN=true
-  echo -e "${CYAN}⚡ Running in dry-run mode (no changes will be made)${NC}"
+  echo -e "${CYAN}Running in dry-run mode (no changes will be made)⚡${NC}"
 fi
 run() { $DRY_RUN && echo -e "${YELLOW}[DRY-RUN] $*${NC}" || eval "$@"; }
 
