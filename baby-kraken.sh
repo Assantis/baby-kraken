@@ -99,7 +99,6 @@ if [[ -n "$custom_version" ]]; then
   fi
 else
   new_version="$proposed_version"
-  echo "${GREEN}Using proposed version: ${CYAN}${new_version}${NC}"
 fi
 
 echo "${GREEN}Proceed with version ${CYAN}${new_version}${GREEN}? (y/yes)${NC}"
@@ -107,3 +106,4 @@ read -r final_confirm
 
 if [[ ! "$final_confirm" =~ ^(y|yes)$ ]]; then
   echo "${RED}Release cancelled.${NC}"
+fi
