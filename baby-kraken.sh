@@ -23,9 +23,9 @@ echo -e "${BLUE}Current branch: ${CYAN}${current_branch}${NC}"
 is_hotfix=false
 
 if [[ "$current_branch" == "develop" ]]; then
-  echo -e "${GREEN}✔ On develop – normal release${NC}"
+  echo -e "${GREEN}On develop normal release${NC}"
 elif [[ "$current_branch" =~ ^hotfix/ ]]; then
-  echo -e "${YELLOW}✔ Hotfix detected${NC}"
+  echo -e "${YELLOW}Hotfix detected${NC}"
   is_hotfix=true
 else
   echo -e "${RED}You must be on 'develop' or 'hotfix/*' to create a release.${NC}"
