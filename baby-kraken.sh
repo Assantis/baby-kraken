@@ -129,4 +129,4 @@ if [[ "$is_hotfix" == true ]]; then
   git push origin develop
 fi
 
-echo -e "${GREEN}Release $new_version completed successfully!${NC}"
+echo -e "${GREEN}Release $new_version completed successfully 🐙${NC}"
