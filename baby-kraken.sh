@@ -1,132 +1,86 @@
 #!/bin/bash
-
 set -euo pipefail
 
-# Colors
-RED=$'\033[0;31m'
-GREEN=$'\033[0;32m'
-YELLOW=$'\033[1;33m'
-BLUE=$'\033[0;34m'
-CYAN=$'\033[0;36m'
-NC=$'\033[0m'
+# --- Colors ---
+RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'; CYAN=$'\033[0;36m'; NC=$'\033[0m'
 
-echo "${BLUE}Checking git status 🔍 ... ${NC}"
+# --- Helper functions ---
+info()    { echo -e "${BLUE}$*${NC}"; }
+success() { echo -e "${GREEN}$*${NC}"; }
+warn()    { echo -e "${YELLOW}$*${NC}"; }
+error()   { echo -e "${RED}$*${NC}"; exit 1; }
+confirm() { read -rp "$1 (y/yes): " ans; [[ "$ans" =~ ^(y|yes)$ ]] || error "Release cancelled."; }
 
-if ! git diff-index --quiet HEAD --; then
-  echo "${RED}You have uncommitted changes. Please commit or stash them before releasing.${NC}"
-  exit 1
-fi
+# --- Check git status ---
+info "Checking git status 🔍 ..."
+git diff-index --quiet HEAD -- || error "You have uncommitted changes. Please commit or stash."
 
 current_branch=$(git rev-parse --abbrev-ref HEAD)
-echo "${BLUE}Current branch: ${CYAN}${current_branch}${NC}"
+info "Current branch: ${CYAN}${current_branch}${NC}"
 
 is_hotfix=false
-
 if [[ "$current_branch" == "develop" ]]; then
-  echo "${GREEN}Develop branch detected => normal release${NC}"
+  success "Develop branch detected → normal release"
 elif [[ "$current_branch" =~ ^hotfix/ ]]; then
-  echo "${YELLOW}Hotfix branch detected => hotfix release${NC}"
+  warn "Hotfix branch detected → hotfix release"
   is_hotfix=true
 else
-  echo "${RED}You must be on 'develop' or 'hotfix/*' to create a release.${NC}"
-  exit 1
+  error "You must be on 'develop' or 'hotfix/*' to create a release."
 fi
 
-echo "${BLUE}Collecting commits that would be released...${NC}"
+# --- Show commits to be released ---
+info "Collecting commits to release..."
+git fetch origin master
+git log --oneline --decorate --graph "origin/master..HEAD"
+commit_count=$(git rev-list --count "origin/master..HEAD")
+(( commit_count == 0 )) && warn "No new commits to release. Aborting." && exit 0
+success "$commit_count commit(s) will be released."
+confirm "Proceed?"
 
-target_branch="master"
-git fetch origin "$target_branch"
-
-echo "${CYAN}Commits that will be included in the release:${NC}"
-git log --oneline --decorate --graph "origin/$target_branch..HEAD"
-
-commit_count=$(git rev-list --count "origin/$target_branch..HEAD")
-
-if [[ "$commit_count" -eq 0 ]]; then
-  echo "${YELLOW}No new commits to release. Aborting.${NC}"
-  exit 0
-fi
-
-echo "${GREEN}${commit_count} commit(s) will be released.${NC}"
-echo "${GREEN}Do you want to proceed? (y/yes):${NC}"
-read -r answer
-
-if [[ ! "$answer" =~ ^(y|yes)$ ]]; then
-  echo "${RED}Release cancelled.${NC}"
-  exit 1
-fi
-
-echo -e "${BLUE}Fetching tags...${NC}"
+# --- Versioning ---
+info "Fetching tags..."
 git fetch --tags
-
-# Strip leading v from latest tag if present
-latest_tag=$(git tag --sort=-v:refname | head -n 1 || true)
-
-# Fallback to 0.0.0 if no tag exists
-if [[ -z "$latest_tag" ]]; then
-  latest_tag="v0.0.0"
-fi
-
+latest_tag=$(git tag --sort=-v:refname | head -n1 || true)
+[[ -z "$latest_tag" ]] && latest_tag="v0.0.0"
 clean_tag="${latest_tag#v}"
-
-# Fallback numeric defaults if clean_tag is empty or malformed
 IFS='.' read -r major minor patch <<< "$clean_tag"
-major=${major:-0}
-minor=${minor:-0}
-patch=${patch:-0}
+major=${major:-0}; minor=${minor:-0}; patch=${patch:-0}
 
 if [[ "$is_hotfix" == true ]]; then
-  proposed_version="v${major}.${minor}.$((patch + 1))"
-  echo "${YELLOW}Hotfix release detected → proposing PATCH bump${NC}"
+  proposed="v${major}.${minor}.$((patch+1))"
 else
-  proposed_version="v${major}.$((minor + 1)).0"
-  echo "${BLUE}Normal release detected → proposing MINOR bump${NC}"
+  proposed="v${major}.$((minor+1)).0"
 fi
-
-echo "${GREEN}Proposed next version: ${CYAN}${proposed_version}${NC}"
-echo "${GREEN}Press Enter to accept, or type a custom semantic version (with leading 'v'):${NC}"
-read -r custom_version
-
-# If user provided custom version → validate it
-if [[ -n "$custom_version" ]]; then
-  # Validate semantic versioning format vX.Y.Z
-  if [[ "$custom_version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    new_version="$custom_version"
-    echo "${GREEN}Using custom version: ${CYAN}${new_version}${NC}"
-  else
-    echo "${RED}Invalid semantic version. Must follow vX.Y.Z (e.g. v1.4.0).${NC}"
-    exit 1
-  fi
+success "Proposed version: ${CYAN}${proposed}${NC}"
+read -rp "Press Enter to accept, or type custom version (vX.Y.Z): " custom
+if [[ -n "$custom" ]]; then
+  [[ "$custom" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || error "Invalid semantic version."
+  new_version="$custom"
 else
-  new_version="$proposed_version"
+  new_version="$proposed"
 fi
+confirm "Proceed with version $new_version?"
 
-echo "${GREEN}Proceed with version ${CYAN}${new_version}${GREEN}? (y/yes)${NC}"
-read -r final_confirm
-
-if [[ ! "$final_confirm" =~ ^(y|yes)$ ]]; then
-  echo "${RED}Release cancelled.${NC}"
-fi
-
-echo -e "${BLUE}Merging '${current_branch}' into master...${NC}"
+# --- Release steps ---
+info "Merging '$current_branch' into master..."
 git checkout master
-git pull origin master --rebase
-git merge --no-ff "$current_branch" -m "Merge branch '$current_branch' for release $new_version"
+git pull --rebase origin master
+git merge --no-ff "$current_branch" -m "Merge '$current_branch' for release $new_version"
 
-echo -e "${BLUE}Tagging release ${new_version}...${NC}"
+info "Tagging release $new_version..."
 git tag -a "$new_version" -m "Release $new_version"
 
-echo -e "${BLUE}Pushing master and tags to origin...${NC}"
-git push origin master
-git push origin "$new_version"
+info "Pushing master and tags..."
+git push origin master "$new_version"
 
 if [[ "$is_hotfix" == true ]]; then
-  echo -e "${BLUE}Hotfix release → merging back into develop...${NC}"
-  echo -e "${BLUE}Don't panic if this step fails, the hotfix is already out${NC}"
+  info "Hotfix → merging back into develop..."
+  warn "Don't panic if this step fails; hotfix already out."
   git checkout develop
-  git pull origin develop --rebase
+  git pull --rebase origin develop
   git merge --no-ff "$current_branch" -m "Merge hotfix '$current_branch' back into develop"
   git push origin develop
 fi
 
-echo -e "${GREEN}Release $new_version completed successfully 🐙${NC}"
+success "Release $new_version completed successfully 🐙"
