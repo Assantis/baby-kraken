@@ -43,7 +43,7 @@ git log --oneline --decorate --graph "origin/$target_branch..HEAD"
 commit_count=$(git rev-list --count "origin/$target_branch..HEAD")
 
 if [[ "$commit_count" -eq 0 ]]; then
-  echo "${YELLOW}⚠ No new commits to release. Aborting.${NC}"
+  echo "${YELLOW}No new commits to release. Aborting.${NC}"
   exit 0
 fi
 
