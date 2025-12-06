@@ -18,16 +18,16 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 current_branch=$(git rev-parse --abbrev-ref HEAD)
-echo -e "${BLUE}Current branch: ${CYAN}${current_branch}${NC}"
+echo "${BLUE}Current branch: ${CYAN}${current_branch}${NC}"
 
 is_hotfix=false
 
-if [ "$current_branch" == "develop" ]; then
-  echo -e "${GREEN}On develop normal release${NC}"
-elif [ "$current_branch" =~ ^hotfix/ ]; then
-  echo -e "${YELLOW}Hotfix detected${NC}"
+if [["$current_branch" == "develop" ]]; then
+  echo "${GREEN}On develop normal release${NC}"
+elif [[ "$current_branch" =~ ^hotfix/ ]]; then
+  echo "${YELLOW}Hotfix detected${NC}"
   is_hotfix=true
 else
-  echo -e "${RED}You must be on 'develop' or 'hotfix/*' to create a release.${NC}"
+  echo "${RED}You must be on 'develop' or 'hotfix/*' to create a release.${NC}"
   exit 1
 fi
