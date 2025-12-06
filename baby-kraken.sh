@@ -32,6 +32,32 @@ else
   exit 1
 fi
 
+echo "${BLUE}Collecting commits that would be released...${NC}"
+
+target_branch="master"
+
+# Update master reference
+git fetch origin "$target_branch"
+
+echo "${CYAN}Commits that will be included in the release:${NC}"
+git log --oneline --decorate --graph "origin/$target_branch..HEAD"
+
+commit_count=$(git rev-list --count "origin/$target_branch..HEAD")
+
+if [[ "$commit_count" -eq 0 ]]; then
+  echo "${YELLOW}⚠ No new commits to release. Aborting.${NC}"
+  exit 0
+fi
+
+echo "${GREEN}${commit_count} commit(s) will be released.${NC}"
+echo "${GREEN}Do you want to proceed? (y/yes):${NC}"
+read -r answer
+
+if [[ ! "$answer" =~ ^(y|yes)$ ]]; then
+  echo "${RED}Release cancelled.${NC}"
+  exit 1
+fi
+
 echo -e "${BLUE}Fetching tags...${NC}"
 git fetch --tags
 
