@@ -107,3 +107,26 @@ read -r final_confirm
 if [[ ! "$final_confirm" =~ ^(y|yes)$ ]]; then
   echo "${RED}Release cancelled.${NC}"
 fi
+
+echo -e "${BLUE}Merging '${current_branch}' into master...${NC}"
+git checkout master
+git pull origin master --rebase
+git merge --no-ff "$current_branch" -m "Merge branch '$current_branch' for release $new_version"
+
+echo -e "${BLUE}Tagging release ${new_version}...${NC}"
+git tag -a "$new_version" -m "Release $new_version"
+
+echo -e "${BLUE}Pushing master and tags to origin...${NC}"
+git push origin master
+git push origin "$new_version"
+
+if [[ "$is_hotfix" == true ]]; then
+  echo -e "${BLUE}Hotfix release → merging back into develop...${NC}"
+  echo -e "${BLUE}Don't panic if this step fails, the hotfix is already out${NC}"
+  git checkout develop
+  git pull origin develop --rebase
+  git merge --no-ff "$current_branch" -m "Merge hotfix '$current_branch' back into develop"
+  git push origin develop
+fi
+
+echo -e "${GREEN}Release $new_version completed successfully!${NC}"
