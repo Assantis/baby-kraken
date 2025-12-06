@@ -5,6 +5,14 @@ set -euo pipefail
 RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'
 BLUE=$'\033[0;34m'; CYAN=$'\033[0;36m'; NC=$'\033[0m'
 
+# --- Dry-run support ---
+DRY_RUN=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN=true
+  echo -e "${CYAN}⚡ Running in dry-run mode (no changes will be made)${NC}"
+fi
+run() { $DRY_RUN && echo -e "${YELLOW}[DRY-RUN] $*${NC}" || eval "$@"; }
+
 # --- Helper functions ---
 info()    { echo -e "${BLUE}$*${NC}"; }
 success() { echo -e "${GREEN}$*${NC}"; }
@@ -31,7 +39,7 @@ fi
 
 # --- Show commits to be released ---
 info "Collecting commits to release..."
-git fetch origin master
+run "git fetch origin master"
 git log --oneline --decorate --graph "origin/master..HEAD"
 commit_count=$(git rev-list --count "origin/master..HEAD")
 (( commit_count == 0 )) && warn "No new commits to release. Aborting." && exit 0
@@ -40,7 +48,7 @@ confirm "Proceed?"
 
 # --- Versioning ---
 info "Fetching tags..."
-git fetch --tags
+run "git fetch --tags"
 latest_tag=$(git tag --sort=-v:refname | head -n1 || true)
 [[ -z "$latest_tag" ]] && latest_tag="v0.0.0"
 clean_tag="${latest_tag#v}"
@@ -64,23 +72,24 @@ confirm "Proceed with version $new_version?"
 
 # --- Release steps ---
 info "Merging '$current_branch' into master..."
-git checkout master
-git pull --rebase origin master
-git merge --no-ff "$current_branch" -m "Merge '$current_branch' for release $new_version"
+run "git checkout master"
+run "git pull --rebase origin master"
+run "git merge --no-ff '$current_branch' -m 'Merge $current_branch for release $new_version'"
 
 info "Tagging release $new_version..."
-git tag -a "$new_version" -m "Release $new_version"
+run "git tag -a '$new_version' -m 'Release $new_version'"
 
 info "Pushing master and tags..."
-git push origin master "$new_version"
+run "git push origin master '$new_version'"
 
 if [[ "$is_hotfix" == true ]]; then
   info "Hotfix → merging back into develop..."
-  warn "Don't panic if this step fails; hotfix already out."
-  git checkout develop
-  git pull --rebase origin develop
-  git merge --no-ff "$current_branch" -m "Merge hotfix '$current_branch' back into develop"
-  git push origin develop
+  warn "Don't panic if this step fails your hotfix already out."
+  run "git checkout develop"
+  run "git pull --rebase origin develop"
+  run "git merge --no-ff '$current_branch' -m 'Merge hotfix $current_branch back into develop'"
+  run "git push origin develop"
 fi
 
 success "Release $new_version completed successfully 🐙"
+
