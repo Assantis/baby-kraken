@@ -35,8 +35,6 @@ fi
 echo "${BLUE}Collecting commits that would be released...${NC}"
 
 target_branch="master"
-
-# Update master reference
 git fetch origin "$target_branch"
 
 echo "${CYAN}Commits that will be included in the release:${NC}"
