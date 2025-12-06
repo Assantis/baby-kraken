@@ -66,3 +66,43 @@ if [[ -z "$latest_tag" ]]; then
 fi
 
 echo -e "${BLUE}Latest tag: ${CYAN}${latest_tag}${NC}"
+
+IFS='.' read -r major minor patch <<< "$latest_tag"
+
+if [[ "$is_hotfix" == true ]]; then
+  # Hotfix → patch bump
+  proposed_version="${major}.${minor}.$((patch + 1))"
+  echo "${YELLOW}Hotfix release detected → proposing PATCH bump${NC}"
+else
+  # Normal release → minor bump
+  proposed_version="${major}.$((minor + 1)).0"
+  echo "${BLUE}Normal release detected → proposing MINOR bump${NC}"
+fi
+
+echo "${GREEN}Proposed next version: ${CYAN}${proposed_version}${NC}"
+echo "${GREEN}Press Enter to accept, or type a custom semantic version:${NC}"
+read -r custom_version
+
+# If user provided a custom version → validate it
+if [[ -n "$custom_version" ]]; then
+  # Validate semantic versioning format X.Y.Z (digits only)
+  if [[ "$custom_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    new_version="$custom_version"
+    echo "${GREEN}Using custom version: ${CYAN}${new_version}${NC}"
+  else
+    echo "${RED}Invalid semantic version. Must follow X.Y.Z (e.g. 1.4.0).${NC}"
+    exit 1
+  fi
+else
+  new_version="$proposed_version"
+  echo "${GREEN}Using proposed version: ${CYAN}${new_version}${NC}"
+fi
+
+# Final confirmation
+echo "${GREEN}Proceed with version ${CYAN}${new_version}${GREEN}? (y/yes)${NC}"
+read -r final_confirm
+
+if [[ ! "$final_confirm" =~ ^(y|yes)$ ]]; then
+  echo "${RED}Release cancelled.${NC}"
+  exit 1
+fi
