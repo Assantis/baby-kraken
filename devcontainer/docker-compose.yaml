@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    container_name: baby-kraken-dev
+    privileged: true
+    volumes:
+      - ~/code/baby-kraken/:/root/code/
+      - ~/.gitconfig:/root/.gitconfig
