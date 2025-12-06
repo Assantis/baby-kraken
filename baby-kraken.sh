@@ -61,9 +61,19 @@ git fetch --tags
 
 # Strip leading v from latest tag if present
 latest_tag=$(git tag --sort=-v:refname | head -n 1 || true)
+
+# Fallback to 0.0.0 if no tag exists
+if [[ -z "$latest_tag" ]]; then
+  latest_tag="v0.0.0"
+fi
+
 clean_tag="${latest_tag#v}"
 
+# Fallback numeric defaults if clean_tag is empty or malformed
 IFS='.' read -r major minor patch <<< "$clean_tag"
+major=${major:-0}
+minor=${minor:-0}
+patch=${patch:-0}
 
 if [[ "$is_hotfix" == true ]]; then
   proposed_version="v${major}.${minor}.$((patch + 1))"
@@ -97,5 +107,3 @@ read -r final_confirm
 
 if [[ ! "$final_confirm" =~ ^(y|yes)$ ]]; then
   echo "${RED}Release cancelled.${NC}"
-  exit 1
-fi
